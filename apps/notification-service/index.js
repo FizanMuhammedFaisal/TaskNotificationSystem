@@ -2,8 +2,6 @@ import { startConsumer } from './kafkaConsumer.js'
 
 export const sendNotification = msg => {
   const { title, description, due_timestamp } = msg
-  const scheduledTime = new Date(Number(due_timestamp) * 1000).toLocaleString()
-
   console.log('\n🔔 Task Notification')
   console.log('--------------------------')
   console.log(`📝 Title       : ${title}`)
