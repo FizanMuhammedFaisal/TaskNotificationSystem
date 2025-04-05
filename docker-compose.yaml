@@ -1,0 +1,73 @@
+services:
+  # postgres:
+  #   image: postgres:17
+  #   container_name: postgres
+  #   restart: always
+  #   ports:
+  #     - '5432:5432'
+  #   environment:
+  #     POSTGRES_USER: myuser
+  #     POSTGRES_PASSWORD: mypassword
+  #     POSTGRES_DB: mydatabase
+  #   volumes:
+  #     - pg-data:/var/lib/postgresql/data
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0 # Pin to a specific version for stability
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - '9092:9092'
+      - '9093:9093'
+    environment:
+      KAFKA_KRAFT_MODE: 'true'
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092 # Already correct
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: 'Mk3OEYBSD34fcwNTJENDM2Qk'
+    volumes:
+      - kafka-data:/var/lib/kafka/data # Use the named volume instead of ./data
+    # Remove /var/run/docker.sock unless explicitly needed
+    healthcheck:
+      test: ['CMD', 'nc', '-z', 'localhost', '9092'] # Check if port 9092 is open
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s # Give Kafka time to start
+  task-service:
+    build:
+      context: .
+      dockerfile: ./apps/task-service/Dockerfile
+    container_name: task-service
+    ports:
+      - '50051:50051'
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+    volumes:
+      - ./apps/task-service:/app/apps/task-service
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./apps/notification-service/Dockerfile
+    container_name: notification-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+    volumes:
+      - ./apps/notification-service:/app/apps/notification-service
+volumes:
+  pg-data:
+  kafka-data:

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package task;
+
+service TaskService {
+  rpc AddTask (TaskRequest) returns (TaskResponse);
+}
+
+message TaskRequest {
+  string title = 1;
+  string description = 2;
+  int64 due_timestamp = 3;
+}
+
+message TaskResponse {
+  bool success = 1;
+  string message = 2;
+}
